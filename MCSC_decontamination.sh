@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 ##############################################################################
 # This script run the MCSC decontamination pipeline.
@@ -29,6 +29,9 @@ UNIREF90=""
 
 # $UNIREF100: path to the UNIREF100 taxonomy list (REQUIRED)
 UNIREF100=""
+
+# $TAXDUMP: path to the NCBI taxonomy dump (REQUIRED)
+TAXDUMP=""
 
 # $MCSC: path to the MCSC_Decontamination folder (REQUIRED)
 MCSC=""
@@ -74,7 +77,7 @@ then
 	
 	## Format the DIAMOND output 
 	perl $MCSC/scripts/get_taxa_from_diamond.pl $OUT/$NAME.daa.tagc \
-	$MCSC/data/names.dmp $MCSC/data/nodes.dmp > $OUT/temp.txt
+	$TAXDUMP/names.dmp $TAXDUMP/nodes.dmp > $OUT/temp.txt
 	sort -rk3,3 $OUT/temp.txt | sort -uk1,1 > $OUT/taxo_uniq.txt  
 	sed "s/'\"//g" $OUT/taxo_uniq.txt > $OUT/temp.txt
 	mv $OUT/temp.txt $OUT/taxo_uniq.txt
@@ -86,6 +89,8 @@ then
 	$MCSC/scripts/mcsc_fix $FASTA $((LVL+1)) $OUT_NAME
 
 fi
+
+
 
 FILE=$(basename "$FASTA")
 NAME="${FILE%.*}"
@@ -99,11 +104,27 @@ perl $MCSC/scripts/cluster_eval.pl $OUT $OUT/taxo_uniq.txt $TAXO_LVL $WHITE_NAME
 ## print a plot of the cluster evaluation
 R CMD BATCH --no-save --no-restore "--args $OUT/cluster_eval.tsv" $MCSC/scripts/clusters_evaluation.R $OUT/clusters_evaluation.Rout
 
-FILES=$(grep -o "\w*.fasta" $OUT/clusters_evaluation.Rout)
-echo $FILES
+## extract the file names from the R output
+FILES=($(grep ".fasta" "${OUT}"/clusters_evaluation.Rout | sed "s/.*"$NAME"/"$NAME"/"))
 
-cat $FILES > $OUT/${NAME}_decont.fasta
+## print the "good" cluster files on scree
+echo "${FILES[@]}" | tr " " "\n"
 
+
+
+## merge the "good" cluster files in a new fasta file labeled "decont"
+counter=0
+for f in "${FILES[@]}"; do
+    let counter+=1
+    if [ "$counter" -eq 1 ]; then
+        cat $OUT/$f > "${OUT}"/"${NAME}"_decont.fasta
+    else
+        cat $OUT/$f >> "${OUT}"/"${NAME}"_decont.fasta
+    fi
+done
+
+## move the cluster files in a sub directory
 mkdir $OUT/clusters
 mv $OUT/*cluster_*.fasta $OUT/clusters/
 
+echo "Done"
