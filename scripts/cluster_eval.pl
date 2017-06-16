@@ -104,7 +104,7 @@ my @best_tax = `$cmd1$cmd2$cmd3$cmd4$cmd5`;
 
 chomp @best_tax;
 
-
+# What if our $WHITE_NAME is not in the top five taxa?
 
 my $taxa1 = shift @best_tax;
 my $taxa2 = shift @best_tax;
