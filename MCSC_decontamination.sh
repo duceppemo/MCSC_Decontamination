@@ -183,6 +183,8 @@ R CMD BATCH --no-save --no-restore \
     "${MCSC}"/scripts/clusters_evaluation.R \
     "${OUT}"/clusters_evaluation.Rout
 
+# Add a check for error in "${OUT}"/clusters_evaluation.Rout
+
 ## extract the file names from the R output
 FILES=($(grep ".fasta" "${OUT}"/clusters_evaluation.Rout | sed "s/.*"$NAME"/"$NAME"/"))
 
